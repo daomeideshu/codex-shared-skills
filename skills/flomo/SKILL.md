@@ -55,6 +55,7 @@ Use flomo MCP for note query, note creation, note updates, tag lookup, and file-
 - Stop and ask when source parsing is messy enough that note boundaries may be wrong.
 - Stop and ask before continuing a batch after the server rejects backfilled timestamps.
 - For multi-note imports, confirm one sample note before writing the rest.
+- The sample note must be written successfully with `memo_create` before any batch import continues.
 
 ## Failure Handling
 - Retry transport errors, timeouts, and 5xx failures with short backoff.
@@ -74,7 +75,7 @@ Use flomo MCP for note query, note creation, note updates, tag lookup, and file-
 - For WeChat Reading markdown exports, read `references/wechat-reading.md` before import.
 - For WeChat Reading imports, put `章节：**章节名**` on the first line of each note body.
 - For WeChat Reading imports, use `结束时间` as the base `created_at` and add one second per note in source order.
-- For WeChat Reading imports, resolve the target tag as `读书笔记/分类/书名` and stop if `分类` has no clear existing match.
+- For WeChat Reading imports, resolve the target tag from your own reading-note tag tree, and stop if the category or book-level tag has no clear existing match.
 
 ## Query Specifics
 - Use `memo_search` first for discovery by keyword, tag, or date filters.

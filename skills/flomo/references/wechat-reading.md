@@ -16,7 +16,8 @@ Use this only for markdown exports from 微信读书.
 - Add one second per note in source order.
 
 ## Tags
-- Build target tag as `读书笔记/分类/书名`.
-- Resolve `分类` from existing `读书笔记` tree first.
+- Build the target tag from your own reading-note tag tree.
+- Use a placeholder pattern such as `<根标签>/<分类>/<书名>` if you need a template.
+- Resolve the category from your existing tag tree first.
 - If no clear match exists, stop and ask for confirmation.
 - Do not create a new category or leaf tag automatically.
