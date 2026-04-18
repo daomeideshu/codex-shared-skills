@@ -28,6 +28,24 @@ skills/<skill-name>/
 
 如果你想在本机 Codex 里使用这个仓库中的 skill，最直接的做法是把目标 skill 目录复制到 Codex 的本地 skills 目录。
 
+### 在 Codex App 里用 GitHub 地址安装
+
+如果你的 Codex App 支持 `skill install`，可以直接使用这个仓库的 GitHub 地址安装单个 skill：
+
+```text
+skill install https://github.com/daomeideshu/codex-shared-skills/tree/main/skills/flomo
+```
+
+如果你要安装仓库里的其他 skill，把路径里的 `flomo` 换成对应目录名即可。
+
+### 安装脚本方式
+
+如果你更习惯用脚本，也可以使用官方 skill installer 的 GitHub 安装脚本：
+
+```powershell
+python C:\Users\admin\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py --url https://github.com/daomeideshu/codex-shared-skills/tree/main/skills/flomo
+```
+
 ### 安装单个 Skill
 
 以 `flomo` 为例：
