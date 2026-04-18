@@ -43,7 +43,7 @@ skill install https://github.com/daomeideshu/codex-shared-skills/tree/main/skill
 如果你更习惯用脚本，也可以使用官方 skill installer 的 GitHub 安装脚本：
 
 ```powershell
-python C:\Users\admin\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py --url https://github.com/daomeideshu/codex-shared-skills/tree/main/skills/flomo
+python "$env:USERPROFILE\.codex\skills\.system\skill-installer\scripts\install-skill-from-github.py" --url https://github.com/daomeideshu/codex-shared-skills/tree/main/skills/flomo
 ```
 
 ### 安装单个 Skill
