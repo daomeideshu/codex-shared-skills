@@ -55,6 +55,7 @@ Use flomo MCP for note query, note creation, note updates, tag lookup, and file-
 - Stop and ask when source parsing is messy enough that note boundaries may be wrong.
 - Stop and ask before continuing a batch after the server rejects backfilled timestamps.
 - For multi-note imports, confirm one sample note before writing the rest.
+- The sample note must be written successfully with `memo_create` before any batch import continues.
 
 ## Failure Handling
 - Retry transport errors, timeouts, and 5xx failures with short backoff.
