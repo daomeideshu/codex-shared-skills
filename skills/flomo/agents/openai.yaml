@@ -1,0 +1,15 @@
+interface:
+  display_name: "Flomo"
+  short_description: "Query, write, import, deduplicate, and reorganize flomo notes"
+  default_prompt: "Use $flomo to search flomo notes, fetch details, create or update memos, import notes from pasted text, PDF, TXT, Markdown, or WeChat Reading exports, reuse or rename tags, and check duplicates before writing."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "flomo"
+      description: "Flomo MCP server"
+      transport: "streamable_http"
+      url: "https://flomoapp.com/mcp"
+
+policy:
+  allow_implicit_invocation: true

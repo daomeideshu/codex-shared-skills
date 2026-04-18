@@ -2,6 +2,10 @@
 
 Repository for reusable Codex skills that can be shared across projects.
 
+## Included Skills
+
+- `skills/flomo` - query, create, import, deduplicate, and reorganize flomo notes
+
 ## Structure
 
 - `skills/` - each skill in its own folder
