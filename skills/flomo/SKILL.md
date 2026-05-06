@@ -3,104 +3,156 @@ name: flomo
 description: Query, create, update, import, deduplicate, and reorganize flomo notes with preserved timestamps and inline tags. Use when the user wants to search flomo, fetch full note details, create or update memos, import notes from pasted text, PDF, TXT, MD, or WeChat Reading markdown exports, reuse or rename tags, avoid duplicates before writing, or clean up flomo note organization.
 ---
 
-# Flomo
+# flomo
 
-## Overview
-Use flomo MCP for note query, note creation, note updates, tag lookup, and file-based imports.
+使用 flomo MCP 查询、创建、更新、导入、去重和整理笔记。
 
-## Quick Route
-1. First classify the request as query, create, import, dedup, or tag cleanup.
-2. Use the lightest matching tool path:
-   - `memo_search` for discovery
-   - `memo_batch_get` only when ids are already known
-   - `memo_create` for new notes
-   - `memo_update` for edits to an existing note
-   - `tag_search` or `tag_tree` for tag resolution
-   - `tag_rename` only for intentional bulk cleanup
-3. Before writing anything, check whether this request needs a confirmation checkpoint.
+## 什么时候使用
+当用户需要以下操作时使用本技能：
 
-## Core Capabilities
-- Query notes by keyword, tag, date, or id.
-- Batch fetch notes in pages of up to 50 items using time-based stepping for query and verification.
-- Create one note from pasted text or a normalized memo block.
-- Import notes from PDF, TXT, MD, or WeChat Reading markdown exports.
-- Check exact duplicates before creating notes.
+- 搜索或汇总 flomo 笔记。
+- 按关键词、标签、日期或 id 获取笔记全文。
+- 创建或更新 memo。
+- 从粘贴文本、PDF、TXT、MD 或微信读书 Markdown 导出内容导入笔记。
+- 导入前检查重复内容。
+- 复用、整理或批量重命名标签。
+- 清理 OCR 造成的标点、断句或重复笔记问题。
 
-## Workflow
-1. Classify the request as query, create, import, or dedup.
-2. Normalize input into memo blocks and preserve source dates when present.
-3. Resolve destination tags from existing tag tree before writing.
-4. Query existing notes when dedup is needed.
-5. Keep batch reads at or below 50 items with time-based pagination.
-6. Skip exact duplicates and report skipped items.
-7. For missing tags, suggest at most two existing matches.
-8. If no existing tag fits, ask for confirmation before creating a new tag.
-9. Create notes with RFC3339 `created_at` when source time is available.
-10. Verify one sample item before batch importing multi-note input.
-11. For poetry or line-break-sensitive notes, always use LF (`\n`) line breaks only; do not use CRLF (`\r\n`) or literal backslash-n text.
+## MCP 工具
+优先使用 flomo MCP 完成笔记查询、笔记创建、笔记更新、标签查询和格式规范读取。
 
-## Concrete Rules
-- Normalize line endings to LF before dedup or write.
-- Compare duplicates against the final body that would be written, not the raw source text.
-- Treat only exact normalized matches as auto-skippable duplicates.
-- If a note is only similar, report it as a possible duplicate instead of skipping it silently.
-- Replace spaces and forbidden punctuation with `_` in tag segments.
-- Do not use emoji in tags.
-- Keep the requested tag path unless the source format defines a stricter destination rule.
-- When formatting matters, read the flomo format guide before composing the final body.
+常用工具：
 
-## Confirmation Checkpoints
-- Stop and ask before creating a new top-level tag or category.
-- Stop and ask when a note is similar but not exactly identical to an existing note.
-- Stop and ask when source parsing is messy enough that note boundaries may be wrong.
-- Stop and ask before continuing a batch after the server rejects backfilled timestamps.
-- For multi-note imports, confirm one sample note before writing the rest.
-- The sample note must be written successfully with `memo_create` before any batch import continues.
+- `memo_search`
+- `memo_batch_get`
+- `memo_create`
+- `memo_update`
+- `memo_recommended`
+- `tag_search`
+- `tag_tree`
+- `tag_rename`
+- `get_format_guide`
+- `get_tag_guide`
 
-## Failure Handling
-- Retry transport errors, timeouts, and 5xx failures with short backoff.
-- Do not retry auth failures, validation failures, or explicit user rejections unchanged.
-- If the source file cannot be parsed reliably, switch to preview mode instead of guessing.
-- If a page still returns 50 items after time-based stepping, shrink the window and retry before advancing.
-- If the client shows `Auth required`, refresh or re-establish the MCP connection before retrying writes.
+## 核心能力
+- 按关键词、标签、日期或 id 查询笔记。
+- 用基于时间窗口的分页方式批量读取笔记，每页不超过 50 条。
+- 从粘贴文本或标准化 memo 块创建单条笔记。
+- 从 PDF、TXT、MD 或微信读书 Markdown 导出内容导入笔记。
+- 当笔记边界不确定时，用版面感知提取、页面渲染检查和预览模式解析 PDF 笔记导出。
+- 创建笔记前检查精确重复。
 
-## Output Contract
-- For query requests, return compact results first: `id`, `created_at`, tags, and a short excerpt.
-- For create or import requests, report what was created, skipped, or blocked.
-- For dedup checks, distinguish exact duplicates from possible near-duplicates.
-- When assumptions were made about tags, dates, or note splitting, state them explicitly.
+## 工作流
+1. 先判断请求属于查询、创建、导入、去重，还是 OCR 标点清理。
+2. 将输入标准化为 memo 块；如果来源中有时间，保留来源时间。
+3. 写入前先从现有标签树解析目标标签。
+4. 需要去重时，先查询已有笔记。
+5. 批量读取时，每页保持在 50 条以内，并使用时间窗口分页。
+6. 跳过精确重复项，并报告被跳过的内容。
+7. 缺少标签时，最多建议两个现有匹配标签。
+8. 如果没有合适的现有标签，创建新标签前先确认。
+9. 来源时间可用时，用 RFC3339 `created_at` 创建笔记。
+10. 多笔记输入批量导入前，先验证一个样本项。
+11. 对诗歌或对换行敏感的笔记，只使用 LF (`\n`) 换行；不要使用 CRLF (`\r\n`) 或字面量反斜杠 n。
+12. 除非来源中明确存在换行或段落断开，否则将相邻行合并到同一段。
+13. 多条笔记共享同一日期时，保留该日期，并按来源顺序每条递增 `+1min`。
+14. 如果来源片段在视觉上是灰色的用户批注，最终笔记正文前加 `批注：`。
 
-## Source-Specific Rules
-- For generic pasted text, TXT, or Markdown, use one memo block per note and preserve source dates when present.
-- For WeChat Reading markdown exports, read `references/wechat-reading.md` before import.
-- For WeChat Reading imports, put `章节：**章节名**` on the first line of each note body.
-- For WeChat Reading imports, use `结束时间` as the base `created_at` and add one second per note in source order.
-- For WeChat Reading imports, resolve the target tag from your own reading-note tag tree, and stop if the category or book-level tag has no clear existing match.
+## PDF 解析
+PDF 导入或 PDF 派生笔记重建时使用这个流程。
 
-## Query Specifics
-- Use `memo_search` first for discovery by keyword, tag, or date filters.
-- Use `memo_batch_get` only after ids are known and full content is required.
-- When reading many notes, keep each page at or below 50 items with time-based stepping.
-- If a time window is still too dense, shrink the window and retry before moving on.
-- If the first query returns only noisy or weakly related hits, report "no confident match yet" before expanding into broader keyword variants.
-- When the user explicitly asks for compact results first, do not spend extra turns on cross-validation unless you already have a strong candidate set to summarize.
+1. 当笔记顺序、日期或段落边界重要时，优先使用版面感知提取，而不是普通纯文本提取。
+2. 如果提取文本包含乱码、私用区字符、表格碎片、重复截断或明显破损的行，不要直接从该文本层写入。
+3. 当内容保真度不确定时，渲染代表性页面并与提取文本对照；OCR 只作为验证或补救手段，不用于猜测缺失内容。
+4. 按明确的来源锚点拆分笔记，例如日期、标题、分隔符或重复的笔记卡片结构。边界仍不确定时，切换到预览模式并展示拟拆分结果。
+5. 重建换行段落时，合并相邻行；除非来源明确表示真实段落断开、列表、诗歌或其他有意换行。
+6. 来源日期可用时保留来源日期；多条笔记共享同一自然日时，按来源顺序递增时间。
+7. 跳过明显的提取噪声，例如图表标题、孤立表格单元格、重复片段或畸形行，不要强行写成 flomo 笔记。
+8. 批量写入多笔记 PDF 前，先创建或预览一个代表性样本，验证标签、时间戳、段落重建和笔记边界行为。
 
-## Input Modes
-- Pasted text
-- PDF, TXT, MD
-- WeChat Reading markdown export
+## OCR 标点清理
+当某个标签下的导入书摘反复出现 OCR 标点错误时使用，例如数字或拉丁字母被误识别成中文标点。
 
-## MCP Tools
-- `memo_search`, `memo_batch_get`, `memo_create`, `memo_update`
-- `tag_search`, `tag_tree`, `tag_rename`
-- `get_format_guide`, `get_tag_guide`
+1. 先用 `memo_search(tag=..., has_tag=true, limit=...)` 读取目标标签全文；如果结果可能不完整，先分页或扩大检索范围再编辑。
+2. 比较内容或判断疑似重复时，忽略重复出现的书名和章节标题样板文本。
+3. 扫描返回笔记中的反常符号，并结合当前标签语料和局部句意推断替换规则。
+4. 先生成逐条笔记的编辑清单，只用 `memo_update` 更新高置信度修复项；保留原标签行和时间戳。
+5. 不要在来源可能承接上文的地方凭空补标点，例如以闭引号开头的笔记。
+6. 编辑后重新读取同一标签，确认已发现的坏符号模式消失。语义搜索结果可能有噪声，最终验证优先使用完整标签重读和人工检查。
+7. 报告检测到的映射、已更新笔记数量，以及保留下来的模糊问题。
 
-## References
-- `references/workflow.md`
-- `references/wechat-reading.md`
-- `references/flomo-mcp-notes.md`
+## 具体规则
+- 去重或写入前，将换行统一为 LF。
+- 重复比较应使用最终将写入的正文，而不是原始来源文本。
+- 只有精确标准化匹配才能自动跳过。
+- 如果笔记只是相似，报告为可能重复，不要静默跳过。
+- 标签片段中的空格和禁用标点替换为 `_`。
+- 标签片段中移除书名号 `《》` 和引号 `“”` 等书名/引用标点，而不是保留。
+- 标签中不要使用 emoji。
+- 保留用户要求的标签路径，除非来源格式定义了更严格的目标规则。
+- 格式很重要时，先读取 flomo 格式规范再组织最终正文。
+- 优先重建段落，而不是机械保留来源换行；除非来源明显使用独立段落或诗歌式有意换行。
+- 多条提取笔记落到同一自然日时，在 `+08:00` 时区内按来源顺序分配 `00:00`、`00:01`、`00:02` 等时间。
+- 来源样式影响语义时，用 `批注：` 前缀保留灰色批注含义，不尝试保留原始颜色。
 
-## Scripts
+## 确认检查点
+- 创建新的顶级标签或分类前，先停止并确认。
+- 笔记相似但不是精确重复时，先停止并确认。
+- 来源解析混乱到可能拆错笔记边界时，先停止并确认。
+- 批量重命名或批量更新大量笔记前，先展示计划和样本。
+
+## 失败处理
+- 对传输错误、超时和 5xx 失败，使用短暂退避重试。
+- 对认证失败、校验失败或用户明确拒绝，不要原样重试。
+- 来源文件无法可靠解析时，切换到预览模式，不要猜测。
+- 如果某页在时间窗口分页后仍返回 50 条，缩小窗口后再继续。
+- 如果客户端显示 `Auth required`，先执行 MCP/Auth 恢复流程，再重试写入。
+
+## MCP/Auth 恢复
+当 `memo_search`、`tag_search`、`memo_create` 或 `memo_update` 返回 `Auth required`、`401 Unauthorized`、陈旧传输错误或批处理中途工具失败时，使用这个流程。
+
+1. 立刻停止盲目重试；重复的同样调用可能造成重复写入，或掩盖真实失败点。
+2. 切换线程或重启前，记录当前操作、目标标签、最后成功的 note id、失败的 memo id 或来源项，以及任何本地预览产物。
+3. 区分失败类型：
+   - 配置缺失：Codex 配置中没有 flomo MCP server。
+   - 线程/会话陈旧：一个线程失败，但新线程或其他当前线程仍能调用 flomo MCP。
+   - 全局认证过期：新线程也返回认证错误。
+4. 对线程/会话陈旧问题，在新线程或 Codex 重启后从记录的失败项继续；如果前面的写入已经成功，不要重跑整个标签或来源文件。
+5. 对全局认证过期，等待重新授权或重新连接，再从记录的检查点继续。
+6. 恢复后，继续写入前先重读受影响的标签或 ids，避免重复创建或重复更新已处理笔记。
+7. 长批量操作中，每次成功写入或移动来源文件后保留轻量检查点，方便后续从最后未完成项继续。
+
+## 输出约定
+- 查询请求：先返回紧凑结果，包括 `id`、`created_at`、tags 和短摘录。
+- 创建或导入请求：报告已创建、已跳过或被阻塞的内容。
+- 去重检查：区分精确重复和可能的近似重复。
+- 如果对标签、日期或笔记拆分做了假设，要明确说明。
+
+## 来源特定规则
+- 普通粘贴文本、TXT 或 Markdown：一条笔记对应一个 memo 块，并在来源日期存在时保留日期。
+- 通用 PDF 导入：合并相邻换行来重建段落，除非能看出真实段落或换行边界。
+- 通用 PDF 导入：按检测到的日期锚点拆分为多条笔记；多条笔记共享同一日期时，按来源顺序每条递增 `+1min`。
+- 通用 PDF 导入：将灰色批注文本转换为普通文本，并加 `批注：` 前缀。
+- 微信读书 Markdown 导出：导入前先阅读 `references/wechat-reading.md`。
+- 微信读书导入：每条笔记正文第一行写 `章节：**章节名**`。
+- 微信读书导入：使用 `结束时间` 作为基础 `created_at`，并按来源顺序每条加 1 秒。
+- 微信读书导入：从自己的阅读笔记标签树解析目标标签；如果分类或书籍级标签没有清晰现有匹配，停止确认。
+
+## 查询细节
+- 按关键词、标签或日期过滤发现笔记时，先用 `memo_search`。
+- 只有已知 ids 且需要全文时，才用 `memo_batch_get`。
+- 读取大量笔记时，每页保持在 50 条以内，并使用时间窗口分页。
+- 如果结果正好等于限制值，假设可能被截断，继续分页。
+
+## 标签操作
+- 标签名直接写在正文中，例如 `#读书/心理学`。
+- 批量改标签路径时，优先使用 `tag_rename`，不要逐条 `memo_update`，除非正文也需要改。
+- 重命名前先读取 `get_tag_guide` 和目标标签树。
+- 重命名后重新读取标签树，验证旧路径消失、新路径存在。
+
+## 脚本
+可用时复用这些辅助脚本：
+
 - `scripts/flomo_common.py`
 - `scripts/flomo_create.py`
 - `scripts/flomo_query.py`
