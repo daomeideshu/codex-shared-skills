@@ -31,11 +31,13 @@
 - `references/flomo-mcp-notes.md` - MCP 连接和传输说明
 - `scripts/` - 用于构造 payload、解析、分页和去重的辅助脚本
 
-## 推荐插件
+## 微信读书 Skill
 
-如果你想把微信读书笔记复制到 flomo，这个插件很适合搭配使用：
+如果你要先获取微信读书官方 Skill 的入口链接，可以从这里进入：
 
-- [wxread-export](https://github.com/scarqin/wxread-export)
+- [微信读书官方 Skill 页面](https://weread.qq.com/r/weread-skills)
+
+在这个页面里可以查看安装指令、API Key 说明和官方支持的能力范围。
 
 ## 说明
 
