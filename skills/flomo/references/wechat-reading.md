@@ -1,23 +1,52 @@
-# WeChat Reading Export
+# WeChat Reading API Sync
 
-Use this only for markdown exports from 微信读书.
+Use this workflow only when syncing notes directly from 微信读书 through the official `weread-skills` API skill.
 
-## Structure
-- First line: book title.
-- Second line: author.
-- Reading metadata includes `开始时间` and `结束时间`.
-- `---` separates metadata from notes.
-- `##` lines are chapter headings.
-- Each `<hr/>` separated quote block is one note.
+Do not use this workflow for local WeChat Reading markdown exports. Those exports are no longer the preferred WeChat Reading path.
 
-## Normalization
-- Put `章节：**章节名**` on the first line of every note body.
-- Use `结束时间` as base `created_at`.
-- Add one second per note in source order.
+## Prerequisites
+- The official `weread-skills` skill is installed.
+- `WEREAD_API_KEY` is available from the environment or the active WeRead skill runtime.
+- Do not write the API key into flomo notes, skill files, logs, or user-facing output.
+
+## Source
+- Use `/user/notebooks` to find books with notes.
+- Use `/book/bookmarklist` for a selected `bookId` to fetch highlights and chapter metadata.
+- Use the API-provided book title, chapter title, highlight text, note/comment text, and item timestamp.
+
+## flomo Format
+Each synced item must use only this body shape:
+
+```text
+章节：章节名
+
+摘录或笔记内容
+
+#目标标签
+```
+
+Do not add:
+- Book title line
+- Author line
+- Source URL or `weread://` link
+- API metadata such as `bookId`, `chapterUid`, or range
+- Extra tags such as `#微信读书/高亮`
+- Markdown bold around the chapter name
 
 ## Tags
-- Build the target tag from your own reading-note tag tree.
+- Build target tag from your own reading-note tag tree.
 - Use a placeholder pattern such as `<根标签>/<分类>/<书名>` if you need a template.
-- Resolve the category from your existing tag tree first.
-- If no clear match exists, stop and ask for confirmation.
-- Do not create a new category or leaf tag automatically.
+- Resolve the category from the existing tag tree first.
+- If no clear category exists, stop and ask for confirmation.
+- Do not create a new top-level category automatically.
+
+## Timestamps
+- Use the source highlight/note timestamp as `created_at` when available.
+- Convert Unix seconds to local `+08:00` time before writing.
+- If multiple items resolve to the same second, add one second per item in source order.
+
+## Dedup and Batch Safety
+- Before creating a note, search flomo for a distinctive excerpt from the final content.
+- Treat only exact normalized final-body matches as duplicates.
+- For batch sync, create one representative sample first and wait for user confirmation before continuing.
+- After confirmation, continue from the next unsynced item, not from the beginning.

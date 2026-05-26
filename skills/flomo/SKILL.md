@@ -1,6 +1,6 @@
 ---
 name: flomo
-description: Query, create, update, import, deduplicate, and reorganize flomo notes with preserved timestamps and inline tags. Use when the user wants to search flomo, fetch full note details, create or update memos, import notes from pasted text, PDF, TXT, MD, or WeChat Reading markdown exports, reuse or rename tags, avoid duplicates before writing, or clean up flomo note organization.
+description: Query, create, update, import, deduplicate, and reorganize flomo notes with preserved timestamps and inline tags. Use when the user wants to search flomo, fetch full note details, create or update memos, import notes from pasted text, PDF, TXT, MD, sync notes directly from WeChat Reading via the official WeRead API skill, reuse or rename tags, avoid duplicates before writing, or clean up flomo note organization.
 ---
 
 # flomo
@@ -27,7 +27,6 @@ description: Query, create, update, import, deduplicate, and reorganize flomo no
 - `memo_batch_get`
 - `memo_create`
 - `memo_update`
-- `memo_recommended`
 - `tag_search`
 - `tag_tree`
 - `tag_rename`
@@ -39,6 +38,7 @@ description: Query, create, update, import, deduplicate, and reorganize flomo no
 - 用基于时间窗口的分页方式批量读取笔记，每页不超过 50 条。
 - 从粘贴文本或标准化 memo 块创建单条笔记。
 - 从 PDF、TXT、MD 或微信读书 Markdown 导出内容导入笔记。
+- 通过官方 WeRead API skill 同步微信读书高亮和笔记。
 - 当笔记边界不确定时，用版面感知提取、页面渲染检查和预览模式解析 PDF 笔记导出。
 - 创建笔记前检查精确重复。
 
@@ -57,6 +57,7 @@ description: Query, create, update, import, deduplicate, and reorganize flomo no
 12. 除非来源中明确存在换行或段落断开，否则将相邻行合并到同一段。
 13. 多条笔记共享同一日期时，保留该日期，并按来源顺序每条递增 `+1min`。
 14. 如果来源片段在视觉上是灰色的用户批注，最终笔记正文前加 `批注：`。
+15. 对微信读书同步路径，阅读 `references/wechat-reading.md`，并不要把本地 Markdown 导出解析当成该路径。
 
 ## PDF 解析
 PDF 导入或 PDF 派生笔记重建时使用这个流程。
@@ -133,10 +134,12 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 - 通用 PDF 导入：合并相邻换行来重建段落，除非能看出真实段落或换行边界。
 - 通用 PDF 导入：按检测到的日期锚点拆分为多条笔记；多条笔记共享同一日期时，按来源顺序每条递增 `+1min`。
 - 通用 PDF 导入：将灰色批注文本转换为普通文本，并加 `批注：` 前缀。
-- 微信读书 Markdown 导出：导入前先阅读 `references/wechat-reading.md`。
-- 微信读书导入：每条笔记正文第一行写 `章节：**章节名**`。
-- 微信读书导入：使用 `结束时间` 作为基础 `created_at`，并按来源顺序每条加 1 秒。
-- 微信读书导入：从自己的阅读笔记标签树解析目标标签；如果分类或书籍级标签没有清晰现有匹配，停止确认。
+- 微信读书同步：导入前先阅读 `references/wechat-reading.md`。
+- 微信读书同步：通过官方 WeRead API skill 获取笔记，不要把本地 Markdown 导出解析当成该路径。
+- 微信读书同步：每条笔记正文第一行写章节名，正文中间留一个空行，最后加目标标签。
+- 微信读书同步：不要添加书名、作者、来源链接、API 元数据或额外标签。
+- 微信读书同步：使用来源高亮/笔记时间作为 `created_at`；如果多个条目落在同一秒，按来源顺序每条加 1 秒。
+- 微信读书同步：从自己的阅读笔记标签树解析目标标签；如果分类或书籍级标签没有清晰现有匹配，停止确认。
 
 ## 查询细节
 - 按关键词、标签或日期过滤发现笔记时，先用 `memo_search`。

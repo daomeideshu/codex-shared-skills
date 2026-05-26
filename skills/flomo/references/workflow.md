@@ -11,7 +11,7 @@
 - Read from pasted text when the user pastes content directly.
 - Use one memo block per note.
 - Preserve source dates when they exist.
-- For 微信读书 exports, read `references/wechat-reading.md`.
+- For 微信读书, sync directly through the official WeRead API skill and read `references/wechat-reading.md`; do not use local markdown export parsing.
 
 ## 3. Resolve tags before writing
 - Keep the requested tag path as destination unless source format defines one.
