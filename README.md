@@ -4,7 +4,7 @@
 
 ## 已包含的 Skill
 
-- `skills/flomo` - 用于查询、新建、导入、去重和整理 flomo 笔记
+- `skills/flomo` - 用于查询、新建、导入、去重和整理 flomo 笔记，并支持通过官方 WeRead API skill 同步微信读书高亮和笔记
 
 ## 仓库结构
 
