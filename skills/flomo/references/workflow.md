@@ -29,8 +29,10 @@
 - Keep pagination as a query-only helper.
 
 ## 5. Write notes
-- If a date is known, set `created_at` in RFC3339 format.
-- If the server rejects backfilled timestamps, report that before continuing.
+- Use `created_at` only when it is present in the exposed `memo_create` schema.
+- When source time exists but `created_at` is unsupported, show the source time in the preview and ask for explicit confirmation to write with the current server time.
+- After confirmation, send create calls serially and wait at least 1 second after each successful response before the next call.
+- If a timestamp parameter is rejected or ignored, stop and inspect the detailed MCP schema before continuing.
 - For transient MCP failures, follow `references/flomo-mcp-notes.md`.
 
 ## 6. Batch import

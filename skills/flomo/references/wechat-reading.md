@@ -41,9 +41,10 @@ Do not add:
 - Do not create a new top-level category automatically.
 
 ## Timestamps
-- Use the source highlight/note timestamp as `created_at` when available.
-- Convert Unix seconds to local `+08:00` time before writing.
-- If multiple items resolve to the same second, add one second per item in source order.
+- Convert source Unix seconds to local `+08:00` time and keep them in preview/checkpoint metadata.
+- Use source time as `created_at` only when the exposed `memo_create` schema supports it.
+- Otherwise ask for explicit confirmation to write the identified batch with current server time.
+- After confirmation, create serially and wait at least 1 second after each successful response before sending the next item.
 
 ## Dedup and Batch Safety
 - Before creating a note, search flomo for a distinctive excerpt from the final content.

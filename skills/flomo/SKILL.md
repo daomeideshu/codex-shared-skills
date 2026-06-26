@@ -1,6 +1,6 @@
 ---
 name: flomo
-description: Query, create, update, import, deduplicate, and reorganize flomo notes with preserved timestamps and inline tags. Use when the user wants to search flomo, fetch full note details, create or update memos, import notes from pasted text, PDF, TXT, MD, sync notes directly from WeChat Reading via the official WeRead API skill, reuse or rename tags, avoid duplicates before writing, or clean up flomo note organization.
+description: Query, create, update, import, deduplicate, and reorganize flomo notes with timestamp-aware source handling and inline tags. Use when the user wants to search flomo, fetch full note details, create or update memos, import notes from pasted text, PDF, TXT, or MD, sync notes directly from WeChat Reading via the official WeRead API skill, reuse or rename tags, avoid duplicates before writing, or clean up flomo note organization.
 ---
 
 # flomo
@@ -13,7 +13,8 @@ description: Query, create, update, import, deduplicate, and reorganize flomo no
 - 搜索或汇总 flomo 笔记。
 - 按关键词、标签、日期或 id 获取笔记全文。
 - 创建或更新 memo。
-- 从粘贴文本、PDF、TXT、MD 或微信读书 Markdown 导出内容导入笔记。
+- 从粘贴文本、PDF、TXT 或 MD 导入笔记。
+- 通过官方 WeRead API skill 同步微信读书高亮和笔记。
 - 导入前检查重复内容。
 - 复用、整理或批量重命名标签。
 - 清理 OCR 造成的标点、断句或重复笔记问题。
@@ -37,7 +38,7 @@ description: Query, create, update, import, deduplicate, and reorganize flomo no
 - 按关键词、标签、日期或 id 查询笔记。
 - 用基于时间窗口的分页方式批量读取笔记，每页不超过 50 条。
 - 从粘贴文本或标准化 memo 块创建单条笔记。
-- 从 PDF、TXT、MD 或微信读书 Markdown 导出内容导入笔记。
+- 从 PDF、TXT 或 MD 导入笔记。
 - 通过官方 WeRead API skill 同步微信读书高亮和笔记。
 - 当笔记边界不确定时，用版面感知提取、页面渲染检查和预览模式解析 PDF 笔记导出。
 - 创建笔记前检查精确重复。
@@ -51,11 +52,11 @@ description: Query, create, update, import, deduplicate, and reorganize flomo no
 6. 跳过精确重复项，并报告被跳过的内容。
 7. 缺少标签时，最多建议两个现有匹配标签。
 8. 如果没有合适的现有标签，创建新标签前先确认。
-9. 来源时间可用时，用 RFC3339 `created_at` 创建笔记。
+9. 只有当前暴露的 `memo_create` schema 支持 `created_at` 时，才传入来源时间；否则在预览中保留来源时间，并询问是否接受使用服务器当前时间写入。
 10. 多笔记输入批量导入前，先验证一个样本项。
 11. 对诗歌或对换行敏感的笔记，只使用 LF (`\n`) 换行；不要使用 CRLF (`\r\n`) 或字面量反斜杠 n。
 12. 除非来源中明确存在换行或段落断开，否则将相邻行合并到同一段。
-13. 多条笔记共享同一日期时，保留该日期，并按来源顺序每条递增 `+1min`。
+13. 多条来源笔记共享同一日期时，在预览元数据里保留按顺序调整后的来源时间；如果当前 MCP 不支持写入 `created_at`，不要暗示 flomo 已保留这些时间。
 14. 如果来源片段在视觉上是灰色的用户批注，最终笔记正文前加 `批注：`。
 15. 对微信读书同步路径，阅读 `references/wechat-reading.md`，并不要把本地 Markdown 导出解析当成该路径。
 
@@ -67,7 +68,7 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 3. 当内容保真度不确定时，渲染代表性页面并与提取文本对照；OCR 只作为验证或补救手段，不用于猜测缺失内容。
 4. 按明确的来源锚点拆分笔记，例如日期、标题、分隔符或重复的笔记卡片结构。边界仍不确定时，切换到预览模式并展示拟拆分结果。
 5. 重建换行段落时，合并相邻行；除非来源明确表示真实段落断开、列表、诗歌或其他有意换行。
-6. 来源日期可用时保留来源日期；多条笔记共享同一自然日时，按来源顺序递增时间。
+6. 来源日期可用时在预览元数据中保留来源日期；多条笔记共享同一自然日时，按来源顺序安排递增的来源时间，但写入仍取决于 `memo_create` 是否支持 `created_at`。
 7. 跳过明显的提取噪声，例如图表标题、孤立表格单元格、重复片段或畸形行，不要强行写成 flomo 笔记。
 8. 批量写入多笔记 PDF 前，先创建或预览一个代表性样本，验证标签、时间戳、段落重建和笔记边界行为。
 
@@ -83,6 +84,12 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 7. 报告检测到的映射、已更新笔记数量，以及保留下来的模糊问题。
 
 ## 具体规则
+- 不要每次请求都检查实时 MCP 服务 schema；优先使用当前 thread 暴露的工具 schema，除非参数被拒绝、被忽略或返回结果与预期矛盾。
+- 如果 `memo_create` 暴露了 `created_at`，传入标准化后的来源时间，并在样本笔记返回后核对 `created_at`。
+- 如果 `memo_create` 没有暴露 `created_at`，在预览中保留来源时间，并在每个明确批次写入前请求一次人工确认，确认是否接受使用服务器当前时间。
+- 当前时间 fallback 被确认后，串行创建笔记。每次 `memo_create` 成功响应后至少等待 1 秒，再发送下一条创建请求。不要并行创建批量笔记。
+- 如果时间参数被拒绝、被静默忽略，或返回时间不一致，停止批次并检查详细 MCP schema 或服务行为；不要继续重试写入。
+- 不要用浏览器自动化或私有 API 绕过 MCP schema 来回填时间戳。
 - 去重或写入前，将换行统一为 LF。
 - 重复比较应使用最终将写入的正文，而不是原始来源文本。
 - 只有精确标准化匹配才能自动跳过。
@@ -93,7 +100,7 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 - 保留用户要求的标签路径，除非来源格式定义了更严格的目标规则。
 - 格式很重要时，先读取 flomo 格式规范再组织最终正文。
 - 优先重建段落，而不是机械保留来源换行；除非来源明显使用独立段落或诗歌式有意换行。
-- 多条提取笔记落到同一自然日时，在 `+08:00` 时区内按来源顺序分配 `00:00`、`00:01`、`00:02` 等时间。
+- 多条提取笔记落到同一自然日时，在 `+08:00` 时区内按来源顺序为预览元数据分配 `00:00`、`00:01`、`00:02` 等来源时间；不要在不支持 `created_at` 的写入面承诺回填。
 - 来源样式影响语义时，用 `批注：` 前缀保留灰色批注含义，不尝试保留原始颜色。
 
 ## 确认检查点
@@ -101,6 +108,10 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 - 笔记相似但不是精确重复时，先停止并确认。
 - 来源解析混乱到可能拆错笔记边界时，先停止并确认。
 - 批量重命名或批量更新大量笔记前，先展示计划和样本。
+- 来源时间无法写入时，使用服务器当前时间前先停止并确认。
+- 一个确认可以覆盖边界清晰的批次；不要对同一批次的每条笔记重复确认。
+- 多笔记导入时，先确认一条样本笔记，再继续写入其余内容。
+- 样本笔记必须用 `memo_create` 成功写入后，才能继续任何批量导入。
 
 ## 失败处理
 - 对传输错误、超时和 5xx 失败，使用短暂退避重试。
@@ -132,13 +143,13 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 ## 来源特定规则
 - 普通粘贴文本、TXT 或 Markdown：一条笔记对应一个 memo 块，并在来源日期存在时保留日期。
 - 通用 PDF 导入：合并相邻换行来重建段落，除非能看出真实段落或换行边界。
-- 通用 PDF 导入：按检测到的日期锚点拆分为多条笔记；多条笔记共享同一日期时，按来源顺序每条递增 `+1min`。
+- 通用 PDF 导入：按检测到的日期锚点拆分为多条笔记；多条笔记共享同一日期时，在预览元数据里按来源顺序每条递增 `+1min`。
 - 通用 PDF 导入：将灰色批注文本转换为普通文本，并加 `批注：` 前缀。
 - 微信读书同步：导入前先阅读 `references/wechat-reading.md`。
 - 微信读书同步：通过官方 WeRead API skill 获取笔记，不要把本地 Markdown 导出解析当成该路径。
 - 微信读书同步：每条笔记正文第一行写章节名，正文中间留一个空行，最后加目标标签。
 - 微信读书同步：不要添加书名、作者、来源链接、API 元数据或额外标签。
-- 微信读书同步：使用来源高亮/笔记时间作为 `created_at`；如果多个条目落在同一秒，按来源顺序每条加 1 秒。
+- 微信读书同步：在预览元数据中保留来源高亮/笔记时间。只有当前 create schema 支持 `created_at` 时才用作写入时间；否则执行已确认的当前时间 fallback 和 1 秒串行间隔。
 - 微信读书同步：从自己的阅读笔记标签树解析目标标签；如果分类或书籍级标签没有清晰现有匹配，停止确认。
 
 ## 查询细节
@@ -162,3 +173,4 @@ PDF 导入或 PDF 派生笔记重建时使用这个流程。
 - `scripts/normalize_input.py`
 - `scripts/paginate_by_time.py`
 - `scripts/dedup_notes.py`
+- `scripts/test_flomo_create.py`
